@@ -8,7 +8,7 @@ import type { ReviewResult } from "@/lib/ai/types";
 import { calcEstimate } from "@/lib/estimate/calc";
 import { createClient } from "@/lib/supabase/server";
 import { uuid } from "@/lib/validation/common";
-import { requireOrgContext } from "@/server/auth";
+import { READ_ONLY_MESSAGE, requireOrgContext } from "@/server/auth";
 import { getEstimateDetail } from "@/server/queries/estimates";
 import {
   type ActionResult,
@@ -32,7 +32,11 @@ export async function runEstimateReviewAction(
   const estimateId = parsed.data;
 
   try {
-    const { organizationId, user } = await requireOrgContext();
+    const { organizationId, user, isReadOnly } = await requireOrgContext();
+    // The review is archived to `ai_reviews`, so running one is a write. The
+    // demo shows the stored result of the last run instead.
+    if (isReadOnly) return failure(READ_ONLY_MESSAGE);
+
     const detail = await getEstimateDetail(organizationId, estimateId);
     if (!detail) return failure("対象の見積が見つかりませんでした。");
     if (detail.items.length === 0) return failure("明細が登録されていないためレビューできません。");

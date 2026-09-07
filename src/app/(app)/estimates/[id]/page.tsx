@@ -40,7 +40,7 @@ export default async function EstimateDetailPage({
   const parsed = uuid.safeParse(id);
   if (!parsed.success) notFound();
 
-  const { organizationId } = await requireOrgContext();
+  const { organizationId, isReadOnly } = await requireOrgContext();
   const estimate = await getEstimateDetail(organizationId, parsed.data);
   if (!estimate) notFound();
 
@@ -63,25 +63,27 @@ export default async function EstimateDetailPage({
           </Link>
         }
         actions={
-          <>
-            <LinkButton href={`/estimates/${estimate.id}/edit`} variant="secondary">
-              <Pencil aria-hidden className="size-4" />
-              編集
-            </LinkButton>
-            <DuplicateButton estimateId={estimate.id} />
-            <DeleteButton
-              action={deleteEstimateAction.bind(null, estimate.id)}
-              title="この見積を削除しますか？"
-              description={
-                <>
-                  「{estimate.title}（{estimate.estimate_number}）」を削除します。
-                  一覧・集計から除外されます（データは論理削除として保持されます）。
-                </>
-              }
-              successMessage="見積を削除しました。"
-              redirectTo="/estimates"
-            />
-          </>
+          isReadOnly ? null : (
+            <>
+              <LinkButton href={`/estimates/${estimate.id}/edit`} variant="secondary">
+                <Pencil aria-hidden className="size-4" />
+                編集
+              </LinkButton>
+              <DuplicateButton estimateId={estimate.id} />
+              <DeleteButton
+                action={deleteEstimateAction.bind(null, estimate.id)}
+                title="この見積を削除しますか？"
+                description={
+                  <>
+                    「{estimate.title}（{estimate.estimate_number}）」を削除します。
+                    一覧・集計から除外されます（データは論理削除として保持されます）。
+                  </>
+                }
+                successMessage="見積を削除しました。"
+                redirectTo="/estimates"
+              />
+            </>
+          )
         }
       />
 
@@ -249,6 +251,7 @@ export default async function EstimateDetailPage({
             estimateId={estimate.id}
             initialReview={latestReview}
             aiConfigured={aiConfigured}
+            readOnly={isReadOnly}
           />
         </div>
 
@@ -316,8 +319,12 @@ export default async function EstimateDetailPage({
           <Card>
             <CardHeader title="操作" />
             <CardBody className="flex flex-col gap-4">
-              <StatusChanger estimateId={estimate.id} currentStatus={estimate.status} />
-              <div className="border-t border-steel-200 pt-4">
+              {isReadOnly ? null : (
+                <StatusChanger estimateId={estimate.id} currentStatus={estimate.status} />
+              )}
+              {/* PDF generation reads the stored estimate and writes nothing, so
+                  it stays available to demo visitors. */}
+              <div className={isReadOnly ? undefined : "border-t border-steel-200 pt-4"}>
                 <p className="mb-2 text-xs font-medium text-ink-muted">見積書</p>
                 <PdfButton estimateId={estimate.id} estimateNumber={estimate.estimate_number} />
               </div>

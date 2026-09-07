@@ -7,6 +7,7 @@ import { usePathname } from "next/navigation";
 
 import {
   Building2,
+  Eye,
   FileText,
   HardHat,
   LayoutDashboard,
@@ -21,6 +22,7 @@ import {
 import { cn } from "@/lib/cn";
 import type { Membership } from "@/server/auth";
 import { OrgSwitcher } from "@/components/layout/org-switcher";
+import { ReadOnlyNotice } from "@/components/ui/read-only-notice";
 import { signOutAction } from "@/server/actions/auth";
 
 interface NavItem {
@@ -74,11 +76,13 @@ function SidebarContent({
   organizationName,
   memberships,
   userLabel,
+  readOnly,
   onNavigate,
 }: {
   organizationName: string;
   memberships: Membership[];
   userLabel: string;
+  readOnly: boolean;
   onNavigate?: () => void;
 }) {
   return (
@@ -98,6 +102,12 @@ function SidebarContent({
 
       <div className="px-3 pb-3">
         <OrgSwitcher organizationName={organizationName} memberships={memberships} />
+        {readOnly ? (
+          <p className="mt-2 flex items-center gap-1.5 rounded-md bg-steel-800 px-2.5 py-1.5 text-[11px] font-medium text-steel-300">
+            <Eye aria-hidden className="size-3.5 shrink-0" />
+            デモ閲覧モード（編集不可）
+          </p>
+        ) : null}
       </div>
 
       <div className="flex-1 overflow-y-auto px-3">
@@ -126,11 +136,13 @@ export function AppShell({
   organizationName,
   memberships,
   userLabel,
+  readOnly,
   children,
 }: {
   organizationName: string;
   memberships: Membership[];
   userLabel: string;
+  readOnly: boolean;
   children: React.ReactNode;
 }) {
   const pathname = usePathname();
@@ -153,6 +165,7 @@ export function AppShell({
             organizationName={organizationName}
             memberships={memberships}
             userLabel={userLabel}
+            readOnly={readOnly}
           />
         </div>
       </aside>
@@ -170,6 +183,7 @@ export function AppShell({
               organizationName={organizationName}
               memberships={memberships}
               userLabel={userLabel}
+              readOnly={readOnly}
               onNavigate={() => setMobileOpen(false)}
             />
           </div>
@@ -191,7 +205,10 @@ export function AppShell({
         </header>
 
         <main className="flex-1 px-4 py-6 sm:px-6 lg:px-8 lg:py-8">
-          <div className="mx-auto w-full max-w-[1400px]">{children}</div>
+          <div className="mx-auto w-full max-w-[1400px]">
+            {readOnly ? <ReadOnlyNotice className="mb-6" /> : null}
+            {children}
+          </div>
         </main>
       </div>
     </div>

@@ -20,3 +20,9 @@ export function getDemoCredentials(): DemoCredentials | null {
 export function isDemoLoginConfigured(): boolean {
   return getDemoCredentials() !== null;
 }
+
+/** Keep the shared account address out of rendered application UI. */
+export function isDemoUserEmail(email: string | null | undefined): boolean {
+  const demoEmail = process.env.DEMO_USER_EMAIL?.trim();
+  return Boolean(demoEmail && email && demoEmail.toLowerCase() === email.trim().toLowerCase());
+}

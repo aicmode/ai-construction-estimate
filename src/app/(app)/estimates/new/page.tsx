@@ -3,6 +3,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 
 import { PageHeader } from "@/components/ui/page-header";
+import { ReadOnlyFormPlaceholder } from "@/components/ui/read-only-notice";
 import { EMPTY_ITEM, EstimateEditor } from "@/components/estimates/estimate-editor";
 import { requireOrgContext } from "@/server/auth";
 import { createEstimateAction } from "@/server/actions/estimates";
@@ -19,7 +20,7 @@ export default async function NewEstimatePage({
   searchParams: Promise<{ projectId?: string; customerId?: string }>;
 }) {
   const { projectId, customerId } = await searchParams;
-  const { organizationId } = await requireOrgContext();
+  const { organizationId, isReadOnly } = await requireOrgContext();
 
   const [customers, projects, company] = await Promise.all([
     listCustomerOptions(organizationId),
@@ -48,26 +49,30 @@ export default async function NewEstimatePage({
           </Link>
         }
       />
-      <EstimateEditor
-        customers={customers}
-        projects={projects}
-        submitLabel="作成"
-        cancelHref="/estimates"
-        onSubmitAction={createEstimateAction}
-        defaultValues={{
-          title: project ? `${project.name}　工事一式` : "",
-          customerId: preselectedCustomerId,
-          projectId: project?.id ?? "",
-          issueDate: toIso(today),
-          validUntil: toIso(validUntil),
-          status: "DRAFT",
-          taxRate: company?.default_tax_rate ?? 10,
-          discountAmount: 0,
-          paymentTerms: company?.default_payment_terms ?? "",
-          notes: "",
-          items: [{ ...EMPTY_ITEM }],
-        }}
-      />
+      {isReadOnly ? (
+        <ReadOnlyFormPlaceholder backHref="/estimates" backLabel="見積一覧に戻る" />
+      ) : (
+        <EstimateEditor
+          customers={customers}
+          projects={projects}
+          submitLabel="作成"
+          cancelHref="/estimates"
+          onSubmitAction={createEstimateAction}
+          defaultValues={{
+            title: project ? `${project.name}　工事一式` : "",
+            customerId: preselectedCustomerId,
+            projectId: project?.id ?? "",
+            issueDate: toIso(today),
+            validUntil: toIso(validUntil),
+            status: "DRAFT",
+            taxRate: company?.default_tax_rate ?? 10,
+            discountAmount: 0,
+            paymentTerms: company?.default_payment_terms ?? "",
+            notes: "",
+            items: [{ ...EMPTY_ITEM }],
+          }}
+        />
+      )}
     </>
   );
 }

@@ -36,7 +36,7 @@ export default async function EstimatesPage({
   const parsed = estimateListFilterSchema.safeParse(raw);
   const filter = parsed.success ? parsed.data : {};
 
-  const { organizationId } = await requireOrgContext();
+  const { organizationId, isReadOnly } = await requireOrgContext();
   const [estimates, customers] = await Promise.all([
     listEstimates(organizationId, filter),
     listCustomerOptions(organizationId),
@@ -50,10 +50,12 @@ export default async function EstimatesPage({
         title="見積"
         description="見積の作成・提出状況と採算を一覧で確認できます。"
         actions={
-          <LinkButton href="/estimates/new" variant="primary">
-            <Plus aria-hidden className="size-4" />
-            見積を作成
-          </LinkButton>
+          isReadOnly ? null : (
+            <LinkButton href="/estimates/new" variant="primary">
+              <Plus aria-hidden className="size-4" />
+              見積を作成
+            </LinkButton>
+          )
         }
       />
 
@@ -148,14 +150,16 @@ export default async function EstimatesPage({
               description={
                 hasFilter
                   ? "検索条件を変更してもう一度お試しください。"
-                  : "顧客と工事案件を登録したあと、最初の見積を作成しましょう。"
+                  : isReadOnly
+                    ? "このデモ環境には表示できる見積がありません。"
+                    : "顧客と工事案件を登録したあと、最初の見積を作成しましょう。"
               }
               action={
                 hasFilter ? (
                   <LinkButton href="/estimates" size="sm" variant="secondary">
                     条件をクリア
                   </LinkButton>
-                ) : (
+                ) : isReadOnly ? null : (
                   <LinkButton href="/estimates/new" size="sm" variant="primary">
                     <Plus aria-hidden className="size-4" />
                     見積を作成

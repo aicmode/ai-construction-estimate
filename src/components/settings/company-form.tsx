@@ -19,7 +19,14 @@ import {
 } from "@/lib/validation/company";
 import { saveCompanySettingsAction } from "@/server/actions/company";
 
-export function CompanyForm({ defaultValues }: { defaultValues: CompanySettingsFormValues }) {
+export function CompanyForm({
+  defaultValues,
+  readOnly = false,
+}: {
+  defaultValues: CompanySettingsFormValues;
+  /** Demo visitors may read the settings but not save them. */
+  readOnly?: boolean;
+}) {
   const router = useRouter();
   const toast = useToast();
   const [formError, setFormError] = React.useState<string | null>(null);
@@ -32,9 +39,13 @@ export function CompanyForm({ defaultValues }: { defaultValues: CompanySettingsF
   } = useForm<CompanySettingsFormValues, unknown, CompanySettingsInput>({
     resolver: zodResolver(companySettingsSchema),
     defaultValues,
+    // Form-level `disabled` marks every registered field read-only in one place,
+    // rather than threading a flag through ~11 inputs.
+    disabled: readOnly,
   });
 
   const onSubmit = handleSubmit(async (values) => {
+    if (readOnly) return;
     setFormError(null);
     const result = await saveCompanySettingsAction(values);
 
@@ -229,7 +240,12 @@ export function CompanyForm({ defaultValues }: { defaultValues: CompanySettingsF
       </Card>
 
       <div className="flex justify-end">
-        <Button type="submit" loading={isSubmitting}>
+        <Button
+          type="submit"
+          loading={isSubmitting}
+          disabled={readOnly}
+          title={readOnly ? "デモ環境では保存できません" : undefined}
+        >
           <Save aria-hidden className="size-4" />
           {isSubmitting ? "保存しています…" : "設定を保存"}
         </Button>

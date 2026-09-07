@@ -64,7 +64,7 @@ function EstimateRow({ estimate, showMargin = true }: { estimate: RecentEstimate
 }
 
 export default async function DashboardPage() {
-  const { organizationId, organizationName } = await requireOrgContext();
+  const { organizationId, organizationName, isReadOnly } = await requireOrgContext();
   const data = await getDashboardData(organizationId);
 
   const statusTotal = ESTIMATE_STATUSES.reduce(
@@ -78,10 +78,12 @@ export default async function DashboardPage() {
         title="ダッシュボード"
         description={`${organizationName} の見積状況（${data.monthLabel}時点）`}
         actions={
-          <LinkButton href="/estimates/new" variant="primary">
-            <Plus aria-hidden className="size-4" />
-            見積を作成
-          </LinkButton>
+          isReadOnly ? null : (
+            <LinkButton href="/estimates/new" variant="primary">
+              <Plus aria-hidden className="size-4" />
+              見積を作成
+            </LinkButton>
+          )
         }
       />
 
@@ -184,10 +186,12 @@ export default async function DashboardPage() {
                 title="見積がまだありません"
                 description="最初の見積を作成すると、ここに表示されます。"
                 action={
-                  <LinkButton href="/estimates/new" variant="primary" size="sm">
-                    <Plus aria-hidden className="size-4" />
-                    見積を作成
-                  </LinkButton>
+                  isReadOnly ? null : (
+                    <LinkButton href="/estimates/new" variant="primary" size="sm">
+                      <Plus aria-hidden className="size-4" />
+                      見積を作成
+                    </LinkButton>
+                  )
                 }
               />
             ) : (

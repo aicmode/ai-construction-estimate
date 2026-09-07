@@ -19,7 +19,7 @@ export default async function CustomersPage({
   searchParams: Promise<{ q?: string }>;
 }) {
   const { q } = await searchParams;
-  const { organizationId } = await requireOrgContext();
+  const { organizationId, isReadOnly } = await requireOrgContext();
   const customers = await listCustomers(organizationId, { q });
 
   return (
@@ -28,10 +28,12 @@ export default async function CustomersPage({
         title="顧客"
         description="工事案件と見積の発行先を管理します。"
         actions={
-          <LinkButton href="/customers/new" variant="primary">
-            <Plus aria-hidden className="size-4" />
-            顧客を登録
-          </LinkButton>
+          isReadOnly ? null : (
+            <LinkButton href="/customers/new" variant="primary">
+              <Plus aria-hidden className="size-4" />
+              顧客を登録
+            </LinkButton>
+          )
         }
       />
 
@@ -72,14 +74,16 @@ export default async function CustomersPage({
               description={
                 q
                   ? "検索条件を変更してもう一度お試しください。"
-                  : "顧客を登録すると、工事案件と見積を紐付けられます。"
+                  : isReadOnly
+                    ? "このデモ環境には表示できる顧客がありません。"
+                    : "顧客を登録すると、工事案件と見積を紐付けられます。"
               }
               action={
                 q ? (
                   <LinkButton href="/customers" size="sm" variant="secondary">
                     検索条件をクリア
                   </LinkButton>
-                ) : (
+                ) : isReadOnly ? null : (
                   <LinkButton href="/customers/new" size="sm" variant="primary">
                     <Plus aria-hidden className="size-4" />
                     顧客を登録

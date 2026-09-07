@@ -10,7 +10,7 @@ import {
   estimateStatusChangeSchema,
   type EstimateInput,
 } from "@/lib/validation/estimate";
-import { requireOrgContext } from "@/server/auth";
+import { READ_ONLY_MESSAGE, requireOrgContext } from "@/server/auth";
 import { getEstimateDetail } from "@/server/queries/estimates";
 import {
   type ActionResult,
@@ -72,7 +72,9 @@ export async function createEstimateAction(input: unknown): Promise<ActionResult
   if (!parsed.success) return fromZodError(parsed.error);
 
   try {
-    const { organizationId } = await requireOrgContext();
+    const { organizationId, isReadOnly } = await requireOrgContext();
+    if (isReadOnly) return failure(READ_ONLY_MESSAGE);
+
     const { totals, items } = buildPersistablePayload(parsed.data);
     const estimateNumber = await allocateEstimateNumber(organizationId, parsed.data.issueDate);
 
@@ -119,7 +121,9 @@ export async function updateEstimateAction(
   if (!parsed.success) return fromZodError(parsed.error);
 
   try {
-    const { organizationId } = await requireOrgContext();
+    const { organizationId, isReadOnly } = await requireOrgContext();
+    if (isReadOnly) return failure(READ_ONLY_MESSAGE);
+
     const { totals, items } = buildPersistablePayload(parsed.data);
 
     const supabase = await createClient();
@@ -163,7 +167,9 @@ export async function changeEstimateStatusAction(input: unknown): Promise<Action
   if (!parsed.success) return fromZodError(parsed.error);
 
   try {
-    const { organizationId } = await requireOrgContext();
+    const { organizationId, isReadOnly } = await requireOrgContext();
+    if (isReadOnly) return failure(READ_ONLY_MESSAGE);
+
     const supabase = await createClient();
 
     const { data, error } = await supabase
@@ -196,7 +202,9 @@ export async function duplicateEstimateAction(
   estimateId: string,
 ): Promise<ActionResult<{ id: string }>> {
   try {
-    const { organizationId } = await requireOrgContext();
+    const { organizationId, isReadOnly } = await requireOrgContext();
+    if (isReadOnly) return failure(READ_ONLY_MESSAGE);
+
     const source = await getEstimateDetail(organizationId, estimateId);
     if (!source) return failure("複製元の見積が見つかりませんでした。");
     if (source.items.length === 0) return failure("明細のない見積は複製できません。");
@@ -269,7 +277,9 @@ export async function duplicateEstimateAction(
  */
 export async function deleteEstimateAction(estimateId: string): Promise<ActionResult> {
   try {
-    const { organizationId } = await requireOrgContext();
+    const { organizationId, isReadOnly } = await requireOrgContext();
+    if (isReadOnly) return failure(READ_ONLY_MESSAGE);
+
     const supabase = await createClient();
 
     const { data, error } = await supabase

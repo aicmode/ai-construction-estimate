@@ -125,7 +125,7 @@ export function CustomerForm({
               id="email"
               type="email"
               inputMode="email"
-              placeholder="demo@example.com"
+              placeholder="contact@example.jp"
               invalid={Boolean(errors.email)}
               aria-describedby={describedBy("email", false, errors.email)}
               {...register("email")}

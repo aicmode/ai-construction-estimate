@@ -4,7 +4,7 @@ import { revalidatePath } from "next/cache";
 
 import { createClient } from "@/lib/supabase/server";
 import { customerSchema } from "@/lib/validation/customer";
-import { requireOrgContext } from "@/server/auth";
+import { READ_ONLY_MESSAGE, requireOrgContext } from "@/server/auth";
 import {
   type ActionResult,
   describeDatabaseError,
@@ -19,7 +19,9 @@ export async function createCustomerAction(input: unknown): Promise<ActionResult
   if (!parsed.success) return fromZodError(parsed.error);
 
   try {
-    const { organizationId, user } = await requireOrgContext();
+    const { organizationId, user, isReadOnly } = await requireOrgContext();
+    if (isReadOnly) return failure(READ_ONLY_MESSAGE);
+
     const supabase = await createClient();
 
     const { data, error } = await supabase
@@ -56,7 +58,9 @@ export async function updateCustomerAction(
   if (!parsed.success) return fromZodError(parsed.error);
 
   try {
-    const { organizationId } = await requireOrgContext();
+    const { organizationId, isReadOnly } = await requireOrgContext();
+    if (isReadOnly) return failure(READ_ONLY_MESSAGE);
+
     const supabase = await createClient();
 
     const { data, error } = await supabase
@@ -91,7 +95,9 @@ export async function updateCustomerAction(
 
 export async function deleteCustomerAction(customerId: string): Promise<ActionResult> {
   try {
-    const { organizationId } = await requireOrgContext();
+    const { organizationId, isReadOnly } = await requireOrgContext();
+    if (isReadOnly) return failure(READ_ONLY_MESSAGE);
+
     const supabase = await createClient();
 
     const { error } = await supabase

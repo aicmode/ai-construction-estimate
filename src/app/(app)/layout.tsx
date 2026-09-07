@@ -1,5 +1,6 @@
 import { AppShell } from "@/components/layout/app-shell";
 import { requireOrgContext } from "@/server/auth";
+import { isDemoUserEmail } from "@/server/demo";
 
 /**
  * Every screen below this layout is per-user data behind a session cookie, so
@@ -16,13 +17,14 @@ export const dynamic = "force-dynamic";
  * organization, so access control never depends on client-side state alone.
  */
 export default async function AppLayout({ children }: { children: React.ReactNode }) {
-  const { organizationName, memberships, user } = await requireOrgContext();
+  const { organizationName, memberships, user, isReadOnly } = await requireOrgContext();
 
   return (
     <AppShell
       organizationName={organizationName}
       memberships={memberships}
-      userLabel={user.email ?? "ログイン中"}
+      userLabel={isDemoUserEmail(user.email) ? "デモユーザー" : (user.email ?? "ログイン中")}
+      readOnly={isReadOnly}
     >
       {children}
     </AppShell>

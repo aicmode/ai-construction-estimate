@@ -35,7 +35,7 @@ export default async function ProjectDetailPage({
   const parsed = uuid.safeParse(id);
   if (!parsed.success) notFound();
 
-  const { organizationId } = await requireOrgContext();
+  const { organizationId, isReadOnly } = await requireOrgContext();
   const project = await getProject(organizationId, parsed.data);
   if (!project) notFound();
 
@@ -59,28 +59,30 @@ export default async function ProjectDetailPage({
           </Link>
         }
         actions={
-          <>
-            <LinkButton href={`/estimates/new?projectId=${project.id}`} variant="primary">
-              <Plus aria-hidden className="size-4" />
-              この案件で見積作成
-            </LinkButton>
-            <LinkButton href={`/projects/${project.id}/edit`} variant="secondary">
-              <Pencil aria-hidden className="size-4" />
-              編集
-            </LinkButton>
-            <DeleteButton
-              action={deleteProjectAction.bind(null, project.id)}
-              title="この工事案件を削除しますか？"
-              description={
-                <>
-                  「{project.name}」を削除します。この操作は取り消せません。
-                  紐付いている見積の案件情報は空欄になります。
-                </>
-              }
-              successMessage="工事案件を削除しました。"
-              redirectTo="/projects"
-            />
-          </>
+          isReadOnly ? null : (
+            <>
+              <LinkButton href={`/estimates/new?projectId=${project.id}`} variant="primary">
+                <Plus aria-hidden className="size-4" />
+                この案件で見積作成
+              </LinkButton>
+              <LinkButton href={`/projects/${project.id}/edit`} variant="secondary">
+                <Pencil aria-hidden className="size-4" />
+                編集
+              </LinkButton>
+              <DeleteButton
+                action={deleteProjectAction.bind(null, project.id)}
+                title="この工事案件を削除しますか？"
+                description={
+                  <>
+                    「{project.name}」を削除します。この操作は取り消せません。
+                    紐付いている見積の案件情報は空欄になります。
+                  </>
+                }
+                successMessage="工事案件を削除しました。"
+                redirectTo="/projects"
+              />
+            </>
+          )
         }
       />
 
@@ -132,10 +134,12 @@ export default async function ProjectDetailPage({
                 title="見積がありません"
                 description="この案件の見積を作成すると、ここに一覧表示されます。"
                 action={
-                  <LinkButton href={`/estimates/new?projectId=${project.id}`} size="sm" variant="primary">
-                    <Plus aria-hidden className="size-4" />
-                    見積を作成
-                  </LinkButton>
+                  isReadOnly ? null : (
+                    <LinkButton href={`/estimates/new?projectId=${project.id}`} size="sm" variant="primary">
+                      <Plus aria-hidden className="size-4" />
+                      見積を作成
+                    </LinkButton>
+                  )
                 }
               />
             ) : (

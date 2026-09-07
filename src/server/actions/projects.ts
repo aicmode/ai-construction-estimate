@@ -4,7 +4,7 @@ import { revalidatePath } from "next/cache";
 
 import { createClient } from "@/lib/supabase/server";
 import { projectSchema } from "@/lib/validation/project";
-import { requireOrgContext } from "@/server/auth";
+import { READ_ONLY_MESSAGE, requireOrgContext } from "@/server/auth";
 import {
   type ActionResult,
   describeDatabaseError,
@@ -35,7 +35,8 @@ export async function createProjectAction(input: unknown): Promise<ActionResult<
   if (!parsed.success) return fromZodError(parsed.error);
 
   try {
-    const { organizationId, user } = await requireOrgContext();
+    const { organizationId, user, isReadOnly } = await requireOrgContext();
+    if (isReadOnly) return failure(READ_ONLY_MESSAGE);
     if (!(await assertCustomerInOrg(organizationId, parsed.data.customerId))) {
       return failure("選択した顧客が見つかりません。", { customerId: ["顧客を選択し直してください。"] });
     }
@@ -77,7 +78,8 @@ export async function updateProjectAction(
   if (!parsed.success) return fromZodError(parsed.error);
 
   try {
-    const { organizationId } = await requireOrgContext();
+    const { organizationId, isReadOnly } = await requireOrgContext();
+    if (isReadOnly) return failure(READ_ONLY_MESSAGE);
     if (!(await assertCustomerInOrg(organizationId, parsed.data.customerId))) {
       return failure("選択した顧客が見つかりません。", { customerId: ["顧客を選択し直してください。"] });
     }
@@ -115,7 +117,9 @@ export async function updateProjectAction(
 
 export async function deleteProjectAction(projectId: string): Promise<ActionResult> {
   try {
-    const { organizationId } = await requireOrgContext();
+    const { organizationId, isReadOnly } = await requireOrgContext();
+    if (isReadOnly) return failure(READ_ONLY_MESSAGE);
+
     const supabase = await createClient();
 
     const { error } = await supabase

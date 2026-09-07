@@ -4,7 +4,7 @@ import { revalidatePath } from "next/cache";
 
 import { createClient } from "@/lib/supabase/server";
 import { companySettingsSchema } from "@/lib/validation/company";
-import { requireOrgContext } from "@/server/auth";
+import { READ_ONLY_MESSAGE, requireOrgContext } from "@/server/auth";
 import {
   type ActionResult,
   describeDatabaseError,
@@ -19,7 +19,9 @@ export async function saveCompanySettingsAction(input: unknown): Promise<ActionR
   if (!parsed.success) return fromZodError(parsed.error);
 
   try {
-    const { organizationId } = await requireOrgContext();
+    const { organizationId, isReadOnly } = await requireOrgContext();
+    if (isReadOnly) return failure(READ_ONLY_MESSAGE);
+
     const supabase = await createClient();
 
     const payload = {

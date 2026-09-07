@@ -46,7 +46,7 @@ export default async function ProjectsPage({
     workType: parseWorkType(raw.workType),
   };
 
-  const { organizationId } = await requireOrgContext();
+  const { organizationId, isReadOnly } = await requireOrgContext();
   const projects = await listProjects(organizationId, filter);
 
   return (
@@ -55,10 +55,12 @@ export default async function ProjectsPage({
         title="工事案件"
         description="顧客ごとの工事案件を管理し、見積と紐付けます。"
         actions={
-          <LinkButton href="/projects/new" variant="primary">
-            <Plus aria-hidden className="size-4" />
-            案件を登録
-          </LinkButton>
+          isReadOnly ? null : (
+            <LinkButton href="/projects/new" variant="primary">
+              <Plus aria-hidden className="size-4" />
+              案件を登録
+            </LinkButton>
+          )
         }
       />
 
@@ -135,12 +137,18 @@ export default async function ProjectsPage({
             <EmptyState
               icon={HardHat}
               title="工事案件が見つかりません"
-              description="条件を変更するか、新しい案件を登録してください。"
+              description={
+                isReadOnly
+                  ? "条件を変更してもう一度お試しください。"
+                  : "条件を変更するか、新しい案件を登録してください。"
+              }
               action={
-                <LinkButton href="/projects/new" size="sm" variant="primary">
-                  <Plus aria-hidden className="size-4" />
-                  案件を登録
-                </LinkButton>
+                isReadOnly ? null : (
+                  <LinkButton href="/projects/new" size="sm" variant="primary">
+                    <Plus aria-hidden className="size-4" />
+                    案件を登録
+                  </LinkButton>
+                )
               }
             />
           ) : (

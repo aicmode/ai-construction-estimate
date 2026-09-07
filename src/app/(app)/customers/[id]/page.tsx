@@ -32,7 +32,7 @@ export default async function CustomerDetailPage({
   const parsed = uuid.safeParse(id);
   if (!parsed.success) notFound();
 
-  const { organizationId } = await requireOrgContext();
+  const { organizationId, isReadOnly } = await requireOrgContext();
   // Scoped to the caller's organization: another tenant's id renders 404.
   const customer = await getCustomer(organizationId, parsed.data);
   if (!customer) notFound();
@@ -53,24 +53,26 @@ export default async function CustomerDetailPage({
           </Link>
         }
         actions={
-          <>
-            <LinkButton href={`/customers/${customer.id}/edit`} variant="secondary">
-              <Pencil aria-hidden className="size-4" />
-              編集
-            </LinkButton>
-            <DeleteButton
-              action={deleteCustomerAction.bind(null, customer.id)}
-              title="この顧客を削除しますか？"
-              description={
-                <>
-                  「{customer.name}」を削除します。この操作は取り消せません。
-                  工事案件または見積が紐付いている場合は削除できません。
-                </>
-              }
-              successMessage="顧客を削除しました。"
-              redirectTo="/customers"
-            />
-          </>
+          isReadOnly ? null : (
+            <>
+              <LinkButton href={`/customers/${customer.id}/edit`} variant="secondary">
+                <Pencil aria-hidden className="size-4" />
+                編集
+              </LinkButton>
+              <DeleteButton
+                action={deleteCustomerAction.bind(null, customer.id)}
+                title="この顧客を削除しますか？"
+                description={
+                  <>
+                    「{customer.name}」を削除します。この操作は取り消せません。
+                    工事案件または見積が紐付いている場合は削除できません。
+                  </>
+                }
+                successMessage="顧客を削除しました。"
+                redirectTo="/customers"
+              />
+            </>
+          )
         }
       />
 
@@ -112,10 +114,12 @@ export default async function CustomerDetailPage({
               title="工事案件"
               description={`${projects.length} 件`}
               actions={
-                <LinkButton href={`/projects/new?customerId=${customer.id}`} size="sm" variant="secondary">
-                  <Plus aria-hidden className="size-4" />
-                  案件を登録
-                </LinkButton>
+                isReadOnly ? null : (
+                  <LinkButton href={`/projects/new?customerId=${customer.id}`} size="sm" variant="secondary">
+                    <Plus aria-hidden className="size-4" />
+                    案件を登録
+                  </LinkButton>
+                )
               }
             />
             <CardBody className="p-0">
@@ -158,10 +162,12 @@ export default async function CustomerDetailPage({
                   title="見積がありません"
                   description="この顧客宛の見積を作成すると、ここに一覧表示されます。"
                   action={
-                    <LinkButton href="/estimates/new" size="sm" variant="primary">
-                      <Plus aria-hidden className="size-4" />
-                      見積を作成
-                    </LinkButton>
+                    isReadOnly ? null : (
+                      <LinkButton href="/estimates/new" size="sm" variant="primary">
+                        <Plus aria-hidden className="size-4" />
+                        見積を作成
+                      </LinkButton>
+                    )
                   }
                 />
               ) : (

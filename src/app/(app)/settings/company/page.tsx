@@ -8,7 +8,7 @@ import { getCompanySettings } from "@/server/queries/company";
 export const metadata: Metadata = { title: "会社設定" };
 
 export default async function CompanySettingsPage() {
-  const { organizationId, organizationName } = await requireOrgContext();
+  const { organizationId, organizationName, isReadOnly } = await requireOrgContext();
   const settings = await getCompanySettings(organizationId);
 
   return (
@@ -18,6 +18,7 @@ export default async function CompanySettingsPage() {
         description="見積書の発行元情報と、新規見積の初期値を設定します。"
       />
       <CompanyForm
+        readOnly={isReadOnly}
         defaultValues={{
           companyName: settings?.company_name || organizationName,
           postalCode: settings?.postal_code ?? "",

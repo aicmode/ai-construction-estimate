@@ -5,7 +5,12 @@ import { redirect } from "next/navigation";
 
 import { createClient } from "@/lib/supabase/server";
 import { loginSchema, onboardingSchema, signupSchema } from "@/lib/validation/auth";
-import { ACTIVE_ORG_COOKIE, getMemberships } from "@/server/auth";
+import {
+  ACTIVE_ORG_COOKIE,
+  READ_ONLY_MESSAGE,
+  getMemberships,
+  isReadOnlySession,
+} from "@/server/auth";
 import { getDemoCredentials } from "@/server/demo";
 import {
   type ActionResult,
@@ -21,6 +26,29 @@ function safeRedirectPath(value: string | undefined): string {
   if (!value) return "/dashboard";
   if (!value.startsWith("/") || value.startsWith("//")) return "/dashboard";
   return value;
+}
+
+type ServerSupabaseClient = Awaited<ReturnType<typeof createClient>>;
+
+async function clearDemoSession(supabase: ServerSupabaseClient | null): Promise<void> {
+  if (supabase) {
+    try {
+      await supabase.auth.signOut();
+    } catch {
+      // Cookie cleanup below still prevents the application from reusing the
+      // active organization when Supabase itself is temporarily unavailable.
+    }
+  }
+
+  try {
+    const cookieStore = await cookies();
+    cookieStore.delete(ACTIVE_ORG_COOKIE);
+    for (const cookie of cookieStore.getAll()) {
+      if (cookie.name.startsWith("sb-")) cookieStore.delete(cookie.name);
+    }
+  } catch {
+    // The safe error response must still be returned if cookie cleanup fails.
+  }
 }
 
 export async function loginAction(
@@ -61,8 +89,10 @@ export async function demoLoginAction(): Promise<ActionResult<{ redirectTo: stri
     return failure("デモ環境は現在利用できません。時間をおいて再度お試しください。");
   }
 
+  let supabase: ServerSupabaseClient | null = null;
+
   try {
-    const supabase = await createClient();
+    supabase = await createClient();
     const { data: auth, error: authError } = await supabase.auth.signInWithPassword(credentials);
 
     if (
@@ -71,7 +101,7 @@ export async function demoLoginAction(): Promise<ActionResult<{ redirectTo: stri
       auth.user.email?.trim().toLowerCase() !== credentials.email.toLowerCase()
     ) {
       console.error("[demo-login] Supabase authentication failed");
-      await supabase.auth.signOut();
+      await clearDemoSession(supabase);
       return failure("デモ環境にログインできませんでした。時間をおいて再度お試しください。");
     }
 
@@ -88,9 +118,7 @@ export async function demoLoginAction(): Promise<ActionResult<{ redirectTo: stri
 
     if (membershipError || !membership || !organization) {
       console.error("[demo-login] Demo organization membership is unavailable");
-      await supabase.auth.signOut();
-      const cookieStore = await cookies();
-      cookieStore.delete(ACTIVE_ORG_COOKIE);
+      await clearDemoSession(supabase);
       return failure("デモ環境の準備が完了していません。時間をおいて再度お試しください。");
     }
 
@@ -118,9 +146,7 @@ export async function demoLoginAction(): Promise<ActionResult<{ redirectTo: stri
 
     if (demoDataChecks.some(({ count, error }) => error || !count)) {
       console.error("[demo-login] Seeded demo data is unavailable");
-      await supabase.auth.signOut();
-      const cookieStore = await cookies();
-      cookieStore.delete(ACTIVE_ORG_COOKIE);
+      await clearDemoSession(supabase);
       return failure("デモ環境の準備が完了していません。時間をおいて再度お試しください。");
     }
 
@@ -135,6 +161,7 @@ export async function demoLoginAction(): Promise<ActionResult<{ redirectTo: stri
 
     return success({ redirectTo: "/dashboard" });
   } catch (error) {
+    await clearDemoSession(supabase);
     return fromUnknownError(
       error,
       "デモ環境にログインできませんでした。時間をおいて再度お試しください。",
@@ -190,6 +217,7 @@ export async function createOrganizationAction(input: unknown): Promise<ActionRe
       data: { user },
     } = await supabase.auth.getUser();
     if (!user) return failure("ログインが必要です。");
+    if (await isReadOnlySession()) return failure(READ_ONLY_MESSAGE);
 
     const { data, error } = await supabase.rpc("create_organization", {
       p_name: parsed.data.organizationName,

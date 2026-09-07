@@ -4,6 +4,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 
 import { PageHeader } from "@/components/ui/page-header";
+import { ReadOnlyFormPlaceholder } from "@/components/ui/read-only-notice";
 import { EstimateEditor } from "@/components/estimates/estimate-editor";
 import { uuid } from "@/lib/validation/common";
 import { requireOrgContext } from "@/server/auth";
@@ -23,7 +24,7 @@ export default async function EditEstimatePage({
   const parsed = uuid.safeParse(id);
   if (!parsed.success) notFound();
 
-  const { organizationId } = await requireOrgContext();
+  const { organizationId, isReadOnly } = await requireOrgContext();
   const [estimate, customers, projects] = await Promise.all([
     getEstimateDetail(organizationId, parsed.data),
     listCustomerOptions(organizationId),
@@ -42,35 +43,39 @@ export default async function EditEstimatePage({
           </Link>
         }
       />
-      <EstimateEditor
-        customers={customers}
-        projects={projects}
-        submitLabel="更新"
-        cancelHref={`/estimates/${estimate.id}`}
-        onSubmitAction={updateEstimateAction.bind(null, estimate.id)}
-        defaultValues={{
-          title: estimate.title,
-          customerId: estimate.customer_id,
-          projectId: estimate.project_id ?? "",
-          issueDate: estimate.issue_date,
-          validUntil: estimate.valid_until ?? "",
-          status: estimate.status,
-          taxRate: estimate.tax_rate,
-          discountAmount: estimate.discount_amount,
-          paymentTerms: estimate.payment_terms,
-          notes: estimate.notes,
-          items: estimate.items.map((item) => ({
-            id: item.id,
-            name: item.name,
-            category: item.category,
-            description: item.description,
-            quantity: item.quantity,
-            unit: item.unit,
-            unitPrice: item.unit_price,
-            unitCost: item.unit_cost,
-          })),
-        }}
-      />
+      {isReadOnly ? (
+        <ReadOnlyFormPlaceholder backHref={`/estimates/${estimate.id}`} backLabel="見積詳細に戻る" />
+      ) : (
+        <EstimateEditor
+          customers={customers}
+          projects={projects}
+          submitLabel="更新"
+          cancelHref={`/estimates/${estimate.id}`}
+          onSubmitAction={updateEstimateAction.bind(null, estimate.id)}
+          defaultValues={{
+            title: estimate.title,
+            customerId: estimate.customer_id,
+            projectId: estimate.project_id ?? "",
+            issueDate: estimate.issue_date,
+            validUntil: estimate.valid_until ?? "",
+            status: estimate.status,
+            taxRate: estimate.tax_rate,
+            discountAmount: estimate.discount_amount,
+            paymentTerms: estimate.payment_terms,
+            notes: estimate.notes,
+            items: estimate.items.map((item) => ({
+              id: item.id,
+              name: item.name,
+              category: item.category,
+              description: item.description,
+              quantity: item.quantity,
+              unit: item.unit,
+              unitPrice: item.unit_price,
+              unitCost: item.unit_cost,
+            })),
+          }}
+        />
+      )}
     </>
   );
 }

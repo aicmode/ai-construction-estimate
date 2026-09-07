@@ -35,6 +35,11 @@ export type ProfileRow = Timestamps & {
   id: string;
   email: string;
   display_name: string;
+  /**
+   * Shared read-only portfolio demo account. Enforced in PostgreSQL (RLS
+   * policies, deny_demo_write() triggers and the writable RPCs), not here.
+   */
+  is_demo: boolean;
 };
 
 export type OrganizationRow = Timestamps & {
@@ -252,6 +257,11 @@ export interface Database {
     };
     Views: Record<string, never>;
     Functions: {
+      /** True when the DB will refuse every write from the current session. */
+      is_demo_user: {
+        Args: Record<string, never>;
+        Returns: boolean;
+      };
       create_organization: {
         Args: { p_name: string; p_company_name?: string | null };
         Returns: string;

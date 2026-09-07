@@ -66,10 +66,16 @@ export function AiReviewPanel({
   estimateId,
   initialReview,
   aiConfigured,
+  readOnly = false,
 }: {
   estimateId: string;
   initialReview: StoredReview | null;
   aiConfigured: boolean;
+  /**
+   * Running a review archives it to `ai_reviews`, so it is a write. The demo
+   * shows the stored result of the last run instead of starting a new one.
+   */
+  readOnly?: boolean;
 }) {
   const router = useRouter();
   const toast = useToast();
@@ -89,6 +95,7 @@ export function AiReviewPanel({
   );
 
   const run = async () => {
+    if (readOnly) return;
     setPending(true);
     setError(null);
     const result = await runEstimateReviewAction(estimateId);
@@ -123,12 +130,19 @@ export function AiReviewPanel({
       <CardHeader
         title="AI見積チェック"
         description={
-          aiConfigured
-            ? "ルールベース診断とAIレビューを実行します。"
-            : "ルールベース診断を実行します（AI機能は未設定）。"
+          readOnly
+            ? "デモ環境では保存済みのチェック結果のみ表示します。"
+            : aiConfigured
+              ? "ルールベース診断とAIレビューを実行します。"
+              : "ルールベース診断を実行します（AI機能は未設定）。"
         }
         actions={
-          <Button onClick={run} loading={pending}>
+          <Button
+            onClick={run}
+            loading={pending}
+            disabled={readOnly}
+            title={readOnly ? "デモ環境では実行できません" : undefined}
+          >
             {pending ? (
               <>
                 <Loader2 aria-hidden className="size-4 animate-spin" />
@@ -161,8 +175,12 @@ export function AiReviewPanel({
         ) : !review ? (
           <EmptyState
             icon={Sparkles}
-            title="まだチェックを実行していません"
-            description="粗利率・原価割れ・入力漏れ・明細の偏りなどを自動で確認します。"
+            title={readOnly ? "保存済みのチェック結果はありません" : "まだチェックを実行していません"}
+            description={
+              readOnly
+                ? "デモ環境では新しいチェックを実行できません。"
+                : "粗利率・原価割れ・入力漏れ・明細の偏りなどを自動で確認します。"
+            }
           />
         ) : (
           <>

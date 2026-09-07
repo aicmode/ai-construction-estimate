@@ -4,6 +4,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 
 import { PageHeader } from "@/components/ui/page-header";
+import { ReadOnlyFormPlaceholder } from "@/components/ui/read-only-notice";
 import { ProjectForm } from "@/components/projects/project-form";
 import { uuid } from "@/lib/validation/common";
 import { requireOrgContext } from "@/server/auth";
@@ -22,7 +23,7 @@ export default async function EditProjectPage({
   const parsed = uuid.safeParse(id);
   if (!parsed.success) notFound();
 
-  const { organizationId } = await requireOrgContext();
+  const { organizationId, isReadOnly } = await requireOrgContext();
   const [project, customers] = await Promise.all([
     getProject(organizationId, parsed.data),
     listCustomerOptions(organizationId),
@@ -39,24 +40,28 @@ export default async function EditProjectPage({
           </Link>
         }
       />
-      <ProjectForm
-        customers={customers}
-        submitLabel="更新"
-        cancelHref={`/projects/${project.id}`}
-        onSubmitAction={updateProjectAction.bind(null, project.id)}
-        defaultValues={{
-          name: project.name,
-          customerId: project.customer_id,
-          workType: project.work_type,
-          siteAddress: project.site_address,
-          description: project.description,
-          scheduledStartDate: project.scheduled_start_date ?? "",
-          scheduledEndDate: project.scheduled_end_date ?? "",
-          managerName: project.manager_name,
-          status: project.status,
-          notes: project.notes,
-        }}
-      />
+      {isReadOnly ? (
+        <ReadOnlyFormPlaceholder backHref={`/projects/${project.id}`} backLabel="工事案件詳細に戻る" />
+      ) : (
+        <ProjectForm
+          customers={customers}
+          submitLabel="更新"
+          cancelHref={`/projects/${project.id}`}
+          onSubmitAction={updateProjectAction.bind(null, project.id)}
+          defaultValues={{
+            name: project.name,
+            customerId: project.customer_id,
+            workType: project.work_type,
+            siteAddress: project.site_address,
+            description: project.description,
+            scheduledStartDate: project.scheduled_start_date ?? "",
+            scheduledEndDate: project.scheduled_end_date ?? "",
+            managerName: project.manager_name,
+            status: project.status,
+            notes: project.notes,
+          }}
+        />
+      )}
     </>
   );
 }

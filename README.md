@@ -121,12 +121,11 @@ cp .env.example .env.local
 | `OPENAI_API_KEY` / `OPENAI_MODEL` | – | `AI_PROVIDER=openai` の場合 | OpenAI Platform |
 | `DEMO_USER_EMAIL` / `DEMO_USER_PASSWORD` | – | ログイン画面の「デモ環境を見る」ボタン用。サーバー側でのみ読み込まれ、ブラウザには渡りません。未設定ならボタンは無効化されます | 自分で作成したデモ用アカウント |
 | `SEED_USER_EMAIL` / `SEED_USER_PASSWORD` | – | デモデータ投入用（ローカル開発のみ） | 自分で作成したアカウント |
-| `DEMO_USER_EMAIL` / `DEMO_USER_PASSWORD` | – | seed 済み組織への1クリックデモログイン（サーバー専用） | 同じ Supabase Auth ユーザー |
 
 `NEXT_PUBLIC_` が付く変数はブラウザに配信されます。**秘密情報を `NEXT_PUBLIC_` で定義しないでください。**
 AI APIキーとデモログイン資格情報はサーバー側でのみ読み込まれ、クライアントバンドルには含まれません。
-`DEMO_USER_EMAIL` と `DEMO_USER_PASSWORD` の両方を設定すると「デモ環境を見る」が有効になり、
-未設定時はボタンが無効になります。通常ログインと新規登録はどちらの場合も利用できます。
+`DEMO_USER_EMAIL` と `DEMO_USER_PASSWORD` の両方を設定すると「デモ環境を見る」が有効になります。
+通常ログインと新規登録はどちらの場合も利用できます。
 
 ### 3. Supabase のセットアップ
 
@@ -155,6 +154,7 @@ supabase status       # URL と anon key を確認して .env.local に設定
 | `0002_rls.sql` | 全テーブルのRLS有効化とポリシー |
 | `0003_functions.sql` | `create_organization` / `next_estimate_number` |
 | `0004_save_estimate.sql` | 見積ヘッダと明細をトランザクションで保存する `save_estimate` |
+| `0005_demo_read_only.sql` | 共有デモアカウントの読み取り専用化（`profiles.is_demo` / RLS / トリガー / RPC） |
 
 適用は番号順に行ってください。すべて再実行可能（冪等）です。
 
@@ -173,8 +173,51 @@ npm run db:seed
 - anon key + ログインセッションで実行するため、**RLSが効いた状態**で自分の組織にしか書き込めません
 - ローカル以外（`127.0.0.1` / `localhost` 以外）のURLに対しては `SEED_CONFIRM=yes` がない限り中断します
 
+> **順序に注意:** seed は「ログインしたユーザーとして」RLS越しに書き込みます。
+> デモ用アカウントを read-only 化（次節）した後は、そのアカウントでは seed できません。
+> **必ず seed を先に実行し、そのあとで `is_demo` を立ててください。**
+
 投入されるデータは戸建てキッチン改修／浴室リフォーム／外壁塗装／店舗内装／エアコン設備更新など、
 すべて架空の内容で、備考欄に識別用マーカーが入ります。
+
+### 6. デモアカウントの読み取り専用化
+
+「デモ環境を見る」は**共有アカウント**です。誰でも同じ組織にログインするため、
+そのままでは閲覧者がデータを編集・削除して次の閲覧者のデモを壊せてしまいます。
+
+seed 完了後に、そのアカウントを read-only にします（SQL Editor で一度だけ実行）:
+
+```sql
+update public.profiles set is_demo = true where email = '<デモ用アドレス>';
+```
+
+解除する場合は `false` にします。フラグは**アプリからは変更できません**
+（`protect_is_demo` トリガーが、ログイン中のセッションによる変更を拒否します）。
+
+**この制御はDB側で完結しています。** `0005_demo_read_only.sql` により、
+
+| 層 | 内容 |
+| --- | --- |
+| RLS | 全業務テーブルの INSERT / UPDATE / DELETE ポリシーに `not is_demo_user()` を追加。SELECT は変更なし |
+| トリガー | 各テーブルの文レベル `BEFORE INSERT/UPDATE/DELETE` で拒否。**SECURITY DEFINER 関数の内側にも効きます** |
+| RPC | `next_estimate_number` / `create_organization` / `save_estimate` が自身でフラグを検査 |
+
+そのため、UIを介さず **Supabase REST / RPC を直接呼んでも書き込みは拒否されます**。
+アプリ側（Server Actions・UI）の制御は、あくまで早期の分かりやすいエラー表示のためのものです。
+
+`DEMO_USER_EMAIL` はログイン用の設定であり、**権限判定には使っていません**。
+権限はDBの `profiles.is_demo` だけで決まります。
+
+フラグを立てたあとは、実際に書き込みが拒否されるかを検証できます:
+
+```bash
+npm run demo:verify
+```
+
+デモアカウントでログインし、REST（RLS・トリガー）と RPC の両方に対して
+INSERT / UPDATE / DELETE / 採番 / 組織作成を1回ずつ試み、**すべて拒否されること**と
+**データが変化していないこと**を確認します。
+`is_demo` が false のままの場合は、実データを汚さないよう検証自体を中止します。
 
 ---
 
@@ -188,6 +231,7 @@ npm run typecheck  # TypeScript 型チェック
 npm run lint       # ESLint
 npm run test       # Vitest
 npm run db:seed    # デモデータ投入
+npm run demo:verify # デモアカウントが読み取り専用になっているか検証
 ```
 
 ### テスト
