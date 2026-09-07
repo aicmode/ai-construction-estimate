@@ -1,6 +1,6 @@
 "use server";
 
-import { cookies } from "next/headers";
+import { cookies, headers } from "next/headers";
 import { redirect } from "next/navigation";
 
 import { createClient } from "@/lib/supabase/server";
@@ -147,11 +147,19 @@ export async function signupAction(input: unknown): Promise<ActionResult<{ needs
   if (!parsed.success) return fromZodError(parsed.error);
 
   try {
+    // Built from the request headers so the confirmation link points at the
+    // deployment the user actually signed up on (localhost, a Vercel preview or
+    // production) without needing a hard-coded base URL.
+    const headerList = await headers();
+    const host = headerList.get("host");
+    const protocol = headerList.get("x-forwarded-proto") ?? (host?.startsWith("localhost") ? "http" : "https");
+    const emailRedirectTo = host ? `${protocol}://${host}/auth/callback` : undefined;
+
     const supabase = await createClient();
     const { data, error } = await supabase.auth.signUp({
       email: parsed.data.email,
       password: parsed.data.password,
-      options: { data: { display_name: parsed.data.displayName } },
+      options: { data: { display_name: parsed.data.displayName }, emailRedirectTo },
     });
 
     if (error) {

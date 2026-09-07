@@ -47,6 +47,12 @@ Excelで属人化しがちな見積作成・原価管理・採算確認を、組
 A4縦・日本語の見積書をサーバー側で生成します。禁則処理付きの独自行分割により、
 日本語の途中にハイフンが混入しません。
 
+### ワンクリックデモログイン
+`DEMO_USER_EMAIL` / `DEMO_USER_PASSWORD` を設定すると、ログイン画面に「デモ環境を見る」ボタンが表示されます。
+通常ログインと同じ Supabase Auth・RLS を経由し、認証されたアカウントが設定値と一致すること、
+組織とデモデータが揃っていることを確認したうえでダッシュボードへ遷移します。
+資格情報はサーバー側でのみ読み込まれ、クライアントバンドルには含まれません。
+
 ### 会社設定
 見積書の発行元情報（会社名・住所・連絡先・インボイス登録番号・振込先）と、
 新規見積の初期値（消費税率・有効期間・支払条件）を設定します。
@@ -113,6 +119,7 @@ cp .env.example .env.local
 | `ANTHROPIC_API_KEY` | – | AIレビュー用。未設定でもアプリは動作 | Anthropic Console |
 | `ANTHROPIC_MODEL` | – | 既定 `claude-sonnet-5` | – |
 | `OPENAI_API_KEY` / `OPENAI_MODEL` | – | `AI_PROVIDER=openai` の場合 | OpenAI Platform |
+| `DEMO_USER_EMAIL` / `DEMO_USER_PASSWORD` | – | ログイン画面の「デモ環境を見る」ボタン用。サーバー側でのみ読み込まれ、ブラウザには渡りません。未設定ならボタンは無効化されます | 自分で作成したデモ用アカウント |
 | `SEED_USER_EMAIL` / `SEED_USER_PASSWORD` | – | デモデータ投入用（ローカル開発のみ） | 自分で作成したアカウント |
 | `DEMO_USER_EMAIL` / `DEMO_USER_PASSWORD` | – | seed 済み組織への1クリックデモログイン（サーバー専用） | 同じ Supabase Auth ユーザー |
 

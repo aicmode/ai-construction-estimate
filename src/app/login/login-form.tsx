@@ -21,6 +21,7 @@ export function LoginForm({ next, demoAvailable }: { next?: string; demoAvailabl
   const toast = useToast();
   const [formError, setFormError] = React.useState<string | null>(null);
   const [isDemoSubmitting, startDemoTransition] = React.useTransition();
+  const demoSubmitLock = React.useRef(false);
 
   const {
     register,
@@ -51,8 +52,9 @@ export function LoginForm({ next, demoAvailable }: { next?: string; demoAvailabl
   });
 
   const onDemoLogin = () => {
-    if (!demoAvailable || isDemoSubmitting || isSubmitting) return;
+    if (!demoAvailable || demoSubmitLock.current || isDemoSubmitting || isSubmitting) return;
 
+    demoSubmitLock.current = true;
     setFormError(null);
     startDemoTransition(async () => {
       try {
@@ -68,6 +70,8 @@ export function LoginForm({ next, demoAvailable }: { next?: string; demoAvailabl
       } catch {
         setFormError(NETWORK_ERROR);
         toast.error(NETWORK_ERROR);
+      } finally {
+        demoSubmitLock.current = false;
       }
     });
   };
